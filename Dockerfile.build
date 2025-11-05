@@ -1,0 +1,10 @@
+##Take base image and copy code into image
+##to run.
+
+FROM node:latest
+LABEL author=coledurham\
+    image=spellcaster\
+    tag=base \
+    project=spellcaster
+RUN npm install -g axios express lodash.debounce nconf
+CMD ["bash"]

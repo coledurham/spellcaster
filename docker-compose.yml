@@ -1,0 +1,18 @@
+services:
+  game:
+    command: npm run server
+    image: spellcaster:local
+    ports:
+      - "4001:3000"
+    networks:
+      - spell-net
+    volumes:
+        - type: bind
+          source: code/
+          target: /app/code
+networks:
+  spell-net:
+    driver: bridge
+
+volumes:
+  game:

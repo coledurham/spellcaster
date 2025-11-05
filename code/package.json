@@ -1,0 +1,15 @@
+{
+  "name": "Spellcaster",
+  "version": "1.0.0",
+  "description": "Exploratory 3D graphics/games. Custom 3D engine in javascript that pipelines to canvas context 2d for final rendering.",
+  "main": "app.js",
+  "scripts": {
+    "server": "node app.js"
+  },
+  "private": true,
+  "author": "coledurham",
+  "dependencies": {
+    "axios": "0.26.1",
+    "express": "4.19.2"
+  }
+}

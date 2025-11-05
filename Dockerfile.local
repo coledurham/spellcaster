@@ -1,0 +1,9 @@
+FROM spellcaster:base
+LABEL author=coledurham\
+    image=spellcaster \
+    tag=local \
+    project=spellcaster
+ENV NODE_PATH=/usr/local/lib/node_modules
+WORKDIR /app/code
+EXPOSE 3000
+CMD ["node", "app.js"]

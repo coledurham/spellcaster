@@ -1,0 +1,121 @@
+html, body {
+  height:100%;
+  width:100%;
+  padding:0;
+  margin:0;
+}
+
+body {
+    background: darkgreen;
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: center;
+    align-items: center;
+}
+
+body #widget {
+  height: 100%;
+  width: 1200px;
+  padding: 0;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-flow: column nowrap;
+}
+ #screen {
+    border: 2px solid orange;
+    height: 400px;
+    width: 400px;
+}
+
+#game-header {
+  display:flex;
+  flex-flow: row nowrap;
+  width:100%; 
+  align-items: center;
+  gap: 2rem;
+  justify-content:center;
+  margin-bottom:2rem;
+}
+
+#game-header * {
+  font-family:monospace;
+}
+
+#game-header h1 {
+  display:flex;
+  flex-flow:row nowrap;
+  padding-right:20px;
+  margin:0;
+  color:greenyellow;
+}
+
+#game-header .game-controls {
+  list-style: none;
+  display:flex;
+  flex-flow:row nowrap;
+  padding:0;
+  margin:0;
+  flex-grow:1;
+  gap:2rem;
+
+  label[for="rotation"] {
+    margin-right:0;
+    margin-left:auto;
+
+    & > input {
+      width:100%;
+    }
+  }
+}
+
+#game-header .game-controls li {
+  margin-right:10px;
+}
+
+#game-header .game-controls label:has(input[type="range"]#rotation) {
+    display:block;
+    width:100%;
+    padding:0;
+    margin:0;
+    margin-top:5px;
+
+    & > input {
+        display:block;
+        width:100%;
+    }
+}
+
+#game-header .game-controls li:last-child {
+  margin:0;
+}
+
+#game-header .game-controls button {
+  margin:0;
+  padding:5px;
+  border-radius: 5px;
+  background-color: orange;
+  color:black;
+}
+
+#game-header .game-controls button:hover {
+  background-color: white;
+  color:black;
+}
+
+#game-header .game-controls button:active {
+  background-color: fuchsia;
+  color:aqua;
+}
+
+body #viewport {
+  background:indigo;
+  width: 1200px;
+  height: 700px;
+  border-width: 20px;
+  border-style: none groove groove none;
+  border-color: transparent green green transparent;
+  box-shadow: 25px 20px 25px darkgreen;
+  outline: none;
+}

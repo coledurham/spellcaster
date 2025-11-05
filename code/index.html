@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>3D Game Engine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/index.css" />
+</head>
+<body tabindex="1">
+    <div id="widget">
+        <header id="game-header">
+            <h1>Cube</h1>
+            <ul class="game-controls">
+                <button id="animate">Animate</button>
+                <button id="direction">Direction</button>
+                <input id="angle" type="text" value="2.5">
+                <label for="rotation"> Rotation
+                    <input id="rotation" min="0" max="360" value="0" type="range" />
+                </label>
+            </ul>
+        </header>
+        <canvas height="400" width="400" id="screen"></canvas>
+    </div>
+    <script type="module" src="scripts/cube.js"></script>
+</body>
+</html>
