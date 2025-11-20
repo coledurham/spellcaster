@@ -1,17 +1,15 @@
+import models from '/assets/models.json' with { type: 'json' }
+
+const { pyramid: model } = models
+
 const canvas = document.querySelector("canvas")
 const ctx = canvas.getContext("2d")
 const shift = 200, width = 400, height = 400, depth = 10, cameraTilt = 20 * (Math.PI / 180)
 
-let angle = 0, angleInc = 2.5, direction = -1, prev = null, animate = true, fill = "indigo", stroke = "red"
+const palette = ["#708090", "#0000FF", "#9932CC", "#2F4F4F", "#FF00FF", "#00FF00", "#708090", "#FFA500"]
+let facePalette = []
 
-const model = [
-    [-100, 100, 100, 1], [100, 100, 100, 1], [100, -100, 100, 1], [-100, -100, 100, 1], // front face
-    [-100, 100, -100, 1], [100, 100, -100, 1], [100, -100, -100, 1], [-100, -100, -100, 1], // back face
-    [-100, 100, 100, 1], [100, 100, 100, 1], [100, 100, -100, 1], [-100, 100, -100, 1], // top face
-    [-100, -100, 100, 1], [100, -100, 100, 1], [100, -100, -100, 1], [-100, -100, -100, 1], // bottom face
-    [-100, 100, 100, 1], [-100, -100, 100, 1], [-100, -100, -100, 1], [-100, 100, -100, 1], // left face
-    [100, 100, 100, 1], [100, -100, 100, 1], [100, -100, -100, 1], [100, 100, -100, 1] // right face
-]
+let angle = 0, angleInc = 2.5, direction = -1, prev = null, animate = true, fill = "indigo", stroke = "red"
 
 function matrixMult(m, n) {
     const results = []
@@ -56,6 +54,16 @@ function genRotateMatrix(theta) {
     ]
 }
 
+function genInversionMatrix(theta) {
+    const radians = theta * (Math.PI / 180)
+    return [
+        [1, 0, 0, 0],
+        [0, Math.cos(radians), -Math.sin(radians), 0],
+        [0, Math.sin(radians), Math.cos(radians), 0],
+        [0, 0, 0, 1]
+    ]
+}
+
 function rotateWorld(model) {
     const rotatedWorld = []
 
@@ -67,17 +75,30 @@ function rotateWorld(model) {
     return rotatedWorld
 }
 
+function invertModel(model, angle) {
+    const inverted = genInversionMatrix(angle)
+
+    const invertedObj = []
+
+    // Invert object in model space
+    for (let k = 0; k < model.length; k++) {
+        invertedObj.push(matrixMult(inverted, model[k].map(el => [el])).flat())
+    }
+
+    return invertedObj
+}
+
 function rotateModel(model, angle) {
     const rotated = genRotateMatrix(angle)
 
-    const rotatedCube = []
+    const rotatedObj = []
 
-    // Rotate cube in model space
+    // Rotate object in model space
     for (let k = 0; k < model.length; k++) {
-        rotatedCube.push(matrixMult(rotated, model[k].map(el => [el])).flat())
+        rotatedObj.push(matrixMult(rotated, model[k].map(el => [el])).flat())
     }
 
-    return rotatedCube
+    return rotatedObj
 }
 
 function normalizeModel(model) {
@@ -129,6 +150,34 @@ function drawYAxis() {
     return rotatedAxis
 }
 
+function renderObj(size, projected, facePalette) {
+    if (size < 3)
+        return
+
+    for (let j = 0; j < projected.length; j += size) {
+        let points = projected.slice(j, j + size)
+
+        if (points.length < size)
+            break
+
+        ctx.beginPath()
+        ctx.strokeStyle = "red"
+
+        ctx.moveTo(points[0][0] + shift, points[0][1] + shift)
+
+        for (let k = 1; k < points.length; k++) {
+            ctx.lineTo(points[k][0] + shift, points[k][1] + shift)
+        }
+
+        ctx.closePath()
+
+        // ctx.fillStyle = facePalette[j/size]
+        // ctx.fill()
+
+        ctx.stroke()
+    }
+}
+
 function draw(timestamp) {
     if (!prev)
         prev = timestamp
@@ -142,7 +191,16 @@ function draw(timestamp) {
 
         angle = Math.abs(angle) > 360 ? 0 : angle
 
-        const transformed = rotateModel(model, angle * direction)
+        if (!facePalette || !facePalette.length) {
+            const paletteSize = model.length / 4
+
+            for (let i = 0; i < paletteSize; i++) {
+                facePalette.push(palette[Math.floor(Math.random() * palette.length)])
+            }
+        }
+
+        const inverted = invertModel(model, 180)
+        const transformed = rotateModel(inverted, angle * direction)
         const worldTransformed = rotateWorld(transformed)
         const normalized = normalizeModel(worldTransformed)
         const projected = projectModel(normalized)
@@ -152,35 +210,7 @@ function draw(timestamp) {
         ctx.fillStyle = "indigo"
         ctx.fillRect(0, 0, width, height)
 
-        for (let j = 0; j < projected.length; j += 4) {
-            let points = projected.slice(j, j + 4)
-
-            if (points.length < 4)
-                break
-
-            ctx.beginPath()
-            ctx.strokeStyle = "red"
-
-            ctx.moveTo(points[0][0] + shift, points[0][1] + shift)
-
-            for (let k = 1; k < points.length; k++) {
-                ctx.lineTo(points[k][0] + shift, points[k][1] + shift)
-            }
-
-            ctx.closePath()
-
-            if (j === 0 || j === 4) {
-                ctx.fillStyle = "limegreen"
-                ctx.fill()
-            }
-
-            if (j === 8 || j === 12) {
-                ctx.fillStyle = "orange"
-                ctx.fill()
-            }
-
-            ctx.stroke()
-        }
+        renderObj(4, projected, facePalette)
 
         ctx.restore()
     }
