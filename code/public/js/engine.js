@@ -1,15 +1,27 @@
 import models from '/assets/models.json' with { type: 'json' }
 
+// const pipeline = new Worker("/scripts/pipeline.js")
+
 const { pyramid: model } = models
 
 const canvas = document.querySelector("canvas")
 const ctx = canvas.getContext("2d")
-const shift = 200, width = 400, height = 400, depth = 10, cameraTilt = 20 * (Math.PI / 180)
+const shift = 400, width = 800, height = 800, depth = 10, cameraTilt = 20 * (Math.PI / 180)
 
 const palette = ["#708090", "#0000FF", "#9932CC", "#2F4F4F", "#FF00FF", "#00FF00", "#708090", "#FFA500"]
 let facePalette = []
 
-let angle = 0, angleInc = 2.5, direction = -1, prev = null, animate = true, fill = "indigo", stroke = "red"
+let angle = 0,
+    angleInc = 2.5,
+    direction = -1,
+    prev = null,
+    animate = true,
+    deltaX = 0,
+    deltaY = 0,
+    deltaTime = 0,
+    deltaInc = 400,
+    fill = palette[3],
+    stroke = palette[5]
 
 function matrixMult(m, n) {
     const results = []
@@ -120,7 +132,7 @@ function normalizeModel(model) {
     return normalizedModel
 }
 
-function projectModel(model) {
+function projectModel(model, x = 0, y = 0) {
     const screenProjection = [
         [width / 2, 0, 0, width / 2],
         [0, height / 2, 0, height / 2],
@@ -132,7 +144,7 @@ function projectModel(model) {
 
     // Scale to screen
     for (let i = 0; i < model.length; i++) {
-        points2D.push(matrixMult([model[i]], screenProjection).flat().slice(0, 2))
+        points2D.push(matrixMult([model[i]], screenProjection).flat().slice(0, 2).map((el, i) => i == 0 ? el + x : el + y))
     }
 
     return points2D
@@ -161,7 +173,7 @@ function renderObj(size, projected, facePalette) {
             break
 
         ctx.beginPath()
-        ctx.strokeStyle = "red"
+        ctx.strokeStyle = stroke
 
         ctx.moveTo(points[0][0] + shift, points[0][1] + shift)
 
@@ -182,7 +194,7 @@ function draw(timestamp) {
     if (!prev)
         prev = timestamp
 
-    let deltaTime = timestamp - prev
+    deltaTime = timestamp - prev
     prev = timestamp
 
     if (deltaTime >= 16.67) {
@@ -203,7 +215,7 @@ function draw(timestamp) {
         const transformed = rotateModel(inverted, angle * direction)
         const worldTransformed = rotateWorld(transformed)
         const normalized = normalizeModel(worldTransformed)
-        const projected = projectModel(normalized)
+        const projected = projectModel(normalized, deltaX, deltaY)
 
         ctx.save()
 
@@ -241,3 +253,33 @@ document.querySelector('input[type="range"]#rotation').addEventListener("change"
     animate = false
     angle = isNaN(parseFloat(e.target.value)) ? 0 : parseFloat(e.target.value)
 })
+
+document.addEventListener("keydown", (e) => {
+    switch (e.key.toLowerCase()) {
+        case "arrowdown":
+        case "s":
+            deltaY += deltaInc*deltaTime/1000
+            break;
+        case "arrowup":
+        case "w":
+            deltaY -= deltaInc*deltaTime/1000
+            break;
+        case "arrowleft":
+        case "a":
+            deltaX -= deltaInc*deltaTime/1000
+            break;
+        case "arrowright":
+        case "d":
+            deltaX += deltaInc*deltaTime/1000
+            break;
+        case "h":
+            deltaX = 0
+            deltaY = 0
+            break;
+        case " ":
+            animate=!animate
+    }
+})
+
+// pipeline.postMessage("project")
+// pipeline.onmessage = (e) => console.log("message from worker is :: ", e.data)
