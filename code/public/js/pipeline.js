@@ -1,5 +1,26 @@
 const shift = 400, width = 800, height = 800, depth = 10, cameraTilt = 20 * (Math.PI / 180)
 
+function pointsToVec(p1, p2) {
+    if (!p1 || !p2 || p1.length < 3 || p2.length < 3)
+        return null
+
+    return [p2[0] - p1[0], p2[1] - p2[1], p2[2] - p1[2]]
+}
+
+function crossProduct(v1, v2) {
+    if(!v1 || !v2 || v1.length < 3 || v2.length < 3)
+        return NaN
+
+    return [(v1[1]*v2[2]) - (v1[2]*v2[1]), -((v1[0]*v2[2]) - (v1[2]*v2[0])), (v1[0]*v2[1]) - (v1[1]*v2[0])]
+}
+
+function dotProduct(v1, v2) {
+    if(!v1 || !v2 || v1.length < 3 || v2.length < 3)
+        return NaN
+
+    return (v1[0]*v2[0]) + (v1[1]*v2[1]) + (v1[2]*v2[2])
+}
+
 function matrixMult(m, n) {
     const results = []
 
@@ -135,6 +156,6 @@ function drawYAxis() {
 
 
 onmessage = (e) => {
-    console.log("yaya")
-    setTimeout(() => postMessage("blarg brah"), 2000)
+    console.log("onmessage in pipeline.js")
+    setTimeout(() => postMessage("return message"), 2000)
 }

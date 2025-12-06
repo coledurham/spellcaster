@@ -6,7 +6,7 @@ const { pyramid: model } = models
 
 const canvas = document.querySelector("canvas")
 const ctx = canvas.getContext("2d")
-const shift = 400, width = 800, height = 800, depth = 10, cameraTilt = 20 * (Math.PI / 180)
+const shift = 400, width = 800, height = 800, depth = 10, cameraTilt = 20 * (Math.PI / 180), modelTilt = 20 * (Math.PI / 180)
 
 const palette = ["#708090", "#0000FF", "#9932CC", "#2F4F4F", "#FF00FF", "#00FF00", "#708090", "#FFA500"]
 let facePalette = []
@@ -20,8 +20,50 @@ let angle = 0,
     deltaY = 0,
     deltaTime = 0,
     deltaInc = 400,
-    fill = palette[3],
-    stroke = palette[5]
+    eye = [0, 0, 1, 1],
+    fill = "#08047dff",
+    stroke = palette[palette.length - 3],
+    filled = true,
+    culled = true
+
+function pointsToVec(p1, p2) {
+    if (!p1 || !p2 || p1.length < 3 || p2.length < 3)
+        return null
+
+    return [
+        p2[0] - p1[0],
+        p2[1] - p1[1],
+        p2[2] - p1[2]
+    ]
+}
+
+function crossProduct(v1, v2) {
+    if (!v1 || !v2 || v1.length < 3 || v2.length < 3)
+        return NaN
+
+    // Note: +0 prevents -0 case
+    return [((v1[1] * v2[2]) - (v1[2] * v2[1]) + 0), ((v1[2] * v2[0]) - (v1[0] * v2[2])) + 0, ((v1[0] * v2[1]) - (v1[1] * v2[0])) + 0]
+}
+
+function dotProduct(v1, v2) {
+    if (!v1 || !v2 || v1.length < 3 || v2.length < 3)
+        return NaN
+
+    return (v1[0] * v2[0]) + (v1[1] * v2[1]) + (v1[2] * v2[2])
+}
+
+function getUnitVec4(v) {
+    // TODO: Expand to arbitrary dimenison and allow omisisons of 0..N fields starting at end
+    const magnitude = Math.sqrt(Math.pow(v[0], 2) + Math.pow(v[1], 2) + Math.pow(v[2], 2))
+
+    return [v[0] / magnitude, v[1] / magnitude, v[2] / magnitude, 1]
+}
+
+function genNormal(p1, p2, p3) {
+    const v1 = pointsToVec(p2, p1), v2 = pointsToVec(p2, p3)
+
+    return crossProduct(v1, v2)
+}
 
 function matrixMult(m, n) {
     const results = []
@@ -49,12 +91,57 @@ function matrixMult(m, n) {
     return results
 }
 
+const modelRotateVertical = [
+    [1, 0, 0, 0],
+    [0, Math.cos(modelTilt), -Math.sin(modelTilt), 0],
+    [0, Math.sin(modelTilt), Math.cos(modelTilt), 0],
+    [0, 0, 0, 1]
+]
+
 const camRotationVertical = [
     [1, 0, 0, 0],
     [0, Math.cos(cameraTilt), -Math.sin(cameraTilt), 0],
     [0, Math.sin(cameraTilt), Math.cos(cameraTilt), 0],
     [0, 0, 0, 1]
 ]
+
+const eyeRotationVertical = [
+    [1, 0, 0, 0],
+    [0, Math.cos(cameraTilt), -Math.sin(cameraTilt), 0],
+    [0, Math.sin(cameraTilt), Math.cos(cameraTilt), 0],
+    [0, 0, 0, 1]
+]
+
+const eyeInversionVertical = [
+    [Math.cos(cameraTilt), -Math.sin(cameraTilt), 0, 0],
+    [Math.sin(cameraTilt), Math.cos(cameraTilt), 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 1]
+]
+
+const orthoProjection = [
+    [2 / width, 0, 0, 0],
+    [0, 2 / height, 0, 0],
+    [0, 0, 2 / (depth - 1), -(depth + 1) / (depth - 1)],
+    [0, 0, 0, 1]
+]
+
+const translateModel = (model, dx = 0, dy = 0, dz = 0) => {
+    const translationMatrix = [
+        [1, 0, 0, dx],
+        [0, 1, 0, dy],
+        [0, 0, 1, dz],
+        [0, 0, 0, 1]
+    ]
+
+    const translated = []
+
+    for (let k = 0; k < model.length; k++) {
+        translated.push(matrixMult(translationMatrix, model[k].map(el => [el])).flat())
+    }
+
+    return translated
+}
 
 function genRotateMatrix(theta) {
     const radians = theta * (Math.PI / 180)
@@ -76,15 +163,37 @@ function genInversionMatrix(theta) {
     ]
 }
 
+function rotateModelVetical(model){
+    const rotatedModel= []
+
+    // Rotate model in world space
+    for (let k = 0; k < model.length; k++) {
+        rotatedModel.push(matrixMult(modelRotateVertical, model[k].map(el => [el])).flat())
+    }
+
+    return rotatedModel
+}
+
 function rotateWorld(model) {
     const rotatedWorld = []
 
-    // Rotate cube in model space
+    // Rotate model in world space
     for (let k = 0; k < model.length; k++) {
         rotatedWorld.push(matrixMult(camRotationVertical, model[k].map(el => [el])).flat())
     }
 
     return rotatedWorld
+}
+
+function rotateEye(eye) {
+    const rotatedEye = []
+
+    // Rotate camera opposite in world space
+    for (let k = 0; k < eye.length; k++) {
+        rotatedEye.push(matrixMult(eyeRotationVertical, eye[k].map(el => [el])).flat())
+    }
+
+    return rotatedEye
 }
 
 function invertModel(model, angle) {
@@ -114,22 +223,27 @@ function rotateModel(model, angle) {
 }
 
 function normalizeModel(model) {
-    // Project into ndc space as orthographic perspective
-    const orthoProjection = [
-        [2 / width, 0, 0, 0],
-        [0, 2 / height, 0, 0],
-        [0, 0, 2 / (depth - 1), -(depth + 1) / (depth - 1)],
-        [0, 0, 0, 1]
-    ]
+    const culledModel = []
 
-    const normalizedModel = []
     // Scale to NDC orthogrpahic space
+    const unitModel = model.map(el => getUnitVec4(el))
 
-    for (let i = 0; i < model.length; i++) {
-        normalizedModel.push(matrixMult(orthoProjection, model[i].map(el => [el])))
+    for (let j = 0; j < unitModel.length; j += 4) {
+        const verts = unitModel.slice(j, j + 4)
+        const vecs = [pointsToVec([...verts[1]], [...verts[2]]), pointsToVec([...verts[1]], [...verts[0]])]
+        const normal = crossProduct(...vecs)
+        const cullDot = dotProduct(eye, normal)
+
+        if(!culled && !filled){
+            culledModel.push({ vertices: [...verts], index: j })
+            continue
+        }
+        else if (cullDot > 0) {
+            culledModel.push({ vertices: [...verts], index: j })
+        }
     }
 
-    return normalizedModel
+    return culledModel
 }
 
 function projectModel(model, x = 0, y = 0) {
@@ -141,10 +255,16 @@ function projectModel(model, x = 0, y = 0) {
     ]
 
     let points2D = []
+    let points = []
 
     // Scale to screen
     for (let i = 0; i < model.length; i++) {
-        points2D.push(matrixMult([model[i]], screenProjection).flat().slice(0, 2).map((el, i) => i == 0 ? el + x : el + y))
+        points = []
+
+        for (let j = 0; j < model[i].vertices.length; j++) {
+            points.push(matrixMult([model[i].vertices[j]], screenProjection).flat().slice(0, 3).map((el, k) => k == 0 ? el + x : el + y))
+        }
+        points2D.push({ vertices: [...points], index: model[i].index })
     }
 
     return points2D
@@ -156,6 +276,13 @@ function clearScreen() {
     ctx.restore()
 }
 
+function fillScreen() {
+    ctx.save()
+    ctx.fillStyle = fill
+    ctx.fillRect(0, 0, width, height)
+    ctx.restore()
+}
+
 function drawYAxis() {
     const rotatedAxis = []
 
@@ -163,14 +290,14 @@ function drawYAxis() {
 }
 
 function renderObj(size, projected, facePalette) {
-    if (size < 3)
-        return
+    // if (size < 3)
+    //     return
+    for (let j = 0; j < projected.length; j++) {
+        // let points = projected.slice(j, j + size)
+        let points = projected[j].vertices
 
-    for (let j = 0; j < projected.length; j += size) {
-        let points = projected.slice(j, j + size)
-
-        if (points.length < size)
-            break
+        // if (points.length < size)
+        //     break
 
         ctx.beginPath()
         ctx.strokeStyle = stroke
@@ -183,8 +310,10 @@ function renderObj(size, projected, facePalette) {
 
         ctx.closePath()
 
-        // ctx.fillStyle = facePalette[j/size]
-        // ctx.fill()
+        if (filled) {
+            ctx.fillStyle = facePalette[projected[j].index / size]
+            ctx.fill()
+        }
 
         ctx.stroke()
     }
@@ -204,30 +333,30 @@ function draw(timestamp) {
         angle = Math.abs(angle) > 360 ? 0 : angle
 
         if (!facePalette || !facePalette.length) {
-            const paletteSize = model.length / 4
+            /* const paletteSize = model.length / 4
 
             for (let i = 0; i < paletteSize; i++) {
                 facePalette.push(palette[Math.floor(Math.random() * palette.length)])
-            }
+            } */
+
+            facePalette = ["red", "green", "blue", "purple", "orange"]
         }
 
-        const inverted = invertModel(model, 180)
-        const transformed = rotateModel(inverted, angle * direction)
-        const worldTransformed = rotateWorld(transformed)
-        const normalized = normalizeModel(worldTransformed)
+        const transformed = rotateModel(model, angle * direction)
+        //const rotated = rotateModelVetical(transformed)
+        const pushed = translateModel(transformed, 0, 0, 410)
+        //const worldTransformed = rotateWorld(pushed)
+        const inverted = invertModel(pushed, 180)
+        const normalized = normalizeModel(inverted)
         const projected = projectModel(normalized, deltaX, deltaY)
 
-        ctx.save()
-
-        ctx.fillStyle = "indigo"
-        ctx.fillRect(0, 0, width, height)
-
+        fillScreen()
         renderObj(4, projected, facePalette)
-
-        ctx.restore()
     }
     window.requestAnimationFrame(draw)
 }
+
+// eye = matrixMult(eyeRotationVertical, eye.map(el => [el])).flat()
 
 window.requestAnimationFrame(draw)
 
@@ -238,6 +367,14 @@ document.querySelector("#animate").addEventListener("click", (e) => {
 
 document.querySelector("#direction").addEventListener("click", (e) => {
     direction *= -1
+})
+
+document.querySelector("#filled").addEventListener("click", (e) => {
+    filled = !filled
+})
+
+document.querySelector("#culled").addEventListener("click", (e) => {
+    culled = !culled
 })
 
 document.querySelector("#angle").addEventListener("change", (e) => {
@@ -258,26 +395,26 @@ document.addEventListener("keydown", (e) => {
     switch (e.key.toLowerCase()) {
         case "arrowdown":
         case "s":
-            deltaY += deltaInc*deltaTime/1000
+            deltaY += deltaInc * deltaTime / 1000
             break;
         case "arrowup":
         case "w":
-            deltaY -= deltaInc*deltaTime/1000
+            deltaY -= deltaInc * deltaTime / 1000
             break;
         case "arrowleft":
         case "a":
-            deltaX -= deltaInc*deltaTime/1000
+            deltaX -= deltaInc * deltaTime / 1000
             break;
         case "arrowright":
         case "d":
-            deltaX += deltaInc*deltaTime/1000
+            deltaX += deltaInc * deltaTime / 1000
             break;
         case "h":
             deltaX = 0
             deltaY = 0
             break;
         case " ":
-            animate=!animate
+            animate = !animate
     }
 })
 
