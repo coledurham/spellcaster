@@ -6,7 +6,7 @@ const { pyramid: model } = models
 
 const canvas = document.querySelector("canvas")
 const ctx = canvas.getContext("2d")
-const shift = 400, width = 800, height = 800, depth = 10, cameraTilt = 20 * (Math.PI / 180), modelTilt = 20 * (Math.PI / 180)
+const shift = 400, width = 800, height = 800, depth = 10, radian = Math.PI / 180, cameraTilt = 20 * radian
 
 const palette = ["#708090", "#0000FF", "#9932CC", "#2F4F4F", "#FF00FF", "#00FF00", "#708090", "#FFA500"]
 let facePalette = []
@@ -16,6 +16,7 @@ let angle = 0,
     direction = -1,
     prev = null,
     animate = true,
+    modelTilt = 0,
     deltaX = 0,
     deltaY = 0,
     deltaTime = 0,
@@ -91,13 +92,6 @@ function matrixMult(m, n) {
     return results
 }
 
-const modelRotateVertical = [
-    [1, 0, 0, 0],
-    [0, Math.cos(modelTilt), -Math.sin(modelTilt), 0],
-    [0, Math.sin(modelTilt), Math.cos(modelTilt), 0],
-    [0, 0, 0, 1]
-]
-
 const camRotationVertical = [
     [1, 0, 0, 0],
     [0, Math.cos(cameraTilt), -Math.sin(cameraTilt), 0],
@@ -163,12 +157,19 @@ function genInversionMatrix(theta) {
     ]
 }
 
-function rotateModelVetical(model){
-    const rotatedModel= []
+function rotateModelVetical(model) {
+    const rotatedModel = []
+
+    let titlMatrix = [
+        [1, 0, 0, 0],
+        [0, Math.cos(modelTilt), -Math.sin(modelTilt), 0],
+        [0, Math.sin(modelTilt), Math.cos(modelTilt), 0],
+        [0, 0, 0, 1]
+    ]
 
     // Rotate model in world space
     for (let k = 0; k < model.length; k++) {
-        rotatedModel.push(matrixMult(modelRotateVertical, model[k].map(el => [el])).flat())
+        rotatedModel.push(matrixMult(titlMatrix, model[k].map(el => [el])).flat())
     }
 
     return rotatedModel
@@ -234,7 +235,7 @@ function normalizeModel(model) {
         const normal = crossProduct(...vecs)
         const cullDot = dotProduct(eye, normal)
 
-        if(!culled && !filled){
+        if (!culled && !filled) {
             culledModel.push({ vertices: [...verts], index: j })
             continue
         }
@@ -290,14 +291,8 @@ function drawYAxis() {
 }
 
 function renderObj(size, projected, facePalette) {
-    // if (size < 3)
-    //     return
     for (let j = 0; j < projected.length; j++) {
-        // let points = projected.slice(j, j + size)
         let points = projected[j].vertices
-
-        // if (points.length < size)
-        //     break
 
         ctx.beginPath()
         ctx.strokeStyle = stroke
@@ -339,12 +334,12 @@ function draw(timestamp) {
                 facePalette.push(palette[Math.floor(Math.random() * palette.length)])
             } */
 
-            facePalette = ["red", "green", "blue", "purple", "orange"]
+            facePalette = ["red", "green", "blue", "purple", "orange", "yellow"]
         }
 
         const transformed = rotateModel(model, angle * direction)
-        //const rotated = rotateModelVetical(transformed)
-        const pushed = translateModel(transformed, 0, 0, 410)
+        const rotated = rotateModelVetical(transformed)
+        const pushed = translateModel(rotated, 0, 0, 410)
         //const worldTransformed = rotateWorld(pushed)
         const inverted = invertModel(pushed, 180)
         const normalized = normalizeModel(inverted)
@@ -389,6 +384,17 @@ document.querySelector("#angle").addEventListener("change", (e) => {
 document.querySelector('input[type="range"]#rotation').addEventListener("change", (e) => {
     animate = false
     angle = isNaN(parseFloat(e.target.value)) ? 0 : parseFloat(e.target.value)
+})
+
+document.querySelector('input[type="text"]#tilt').addEventListener("change", (e) => {
+    const parsedTilt = parseFloat(e.target.value)
+
+    if(isNaN(parsedTilt) || parsedTilt < -360 || parsedTilt > 360){
+        e.target.value=modelTilt/radian
+        return
+    }
+
+    modelTilt = parsedTilt * radian
 })
 
 document.addEventListener("keydown", (e) => {
