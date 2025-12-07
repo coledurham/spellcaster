@@ -2,7 +2,7 @@ import models from '/assets/models.json' with { type: 'json' }
 
 // const pipeline = new Worker("/scripts/pipeline.js")
 
-const { pyramid: model } = models
+let model = models["cube"]
 
 const canvas = document.querySelector("canvas")
 const ctx = canvas.getContext("2d")
@@ -334,7 +334,7 @@ function draw(timestamp) {
                 facePalette.push(palette[Math.floor(Math.random() * palette.length)])
             } */
 
-            facePalette = ["red", "green", "blue", "purple", "orange", "yellow"]
+            facePalette = ["red", "green", "blue", "purple", "orange", "#7FFF00", "#00FF00", "#0000FF", "##FF1493"]
         }
 
         const transformed = rotateModel(model, angle * direction)
@@ -389,8 +389,8 @@ document.querySelector('input[type="range"]#rotation').addEventListener("change"
 document.querySelector('input[type="text"]#tilt').addEventListener("change", (e) => {
     const parsedTilt = parseFloat(e.target.value)
 
-    if(isNaN(parsedTilt) || parsedTilt < -360 || parsedTilt > 360){
-        e.target.value=modelTilt/radian
+    if (isNaN(parsedTilt) || parsedTilt < -360 || parsedTilt > 360) {
+        e.target.value = modelTilt / radian
         return
     }
 
@@ -422,6 +422,24 @@ document.addEventListener("keydown", (e) => {
         case " ":
             animate = !animate
     }
+})
+
+const modelSelect = document.querySelector("select#model")
+
+console.log("modelSelect is :: ", modelSelect)
+
+for (let selectOption of Object.keys(models)) {
+    let option = document.createElement("option")
+    option.value = selectOption
+    option.text = selectOption
+
+    modelSelect.appendChild(option)
+}
+
+modelSelect.value="cube"
+
+modelSelect.addEventListener("change", (e) => {
+    model=models[e.target.value]
 })
 
 // pipeline.postMessage("project")
