@@ -1,16 +1,22 @@
 SHELL := bash
+PLATFORM ?= linux/amd64
+REMOTE ?= changeme.com
 
 .PHONY: help
 
 build-base: Dockerfile.build
-	@docker build -t spellcaster:base -f Dockerfile.build .
+	@docker build --platform $(PLATFORM) -t spellcaster:base -f Dockerfile.build .
 
 build-local: Dockerfile.build Dockerfile.local
-	@docker build -t spellcaster:local -f Dockerfile.local .
+	@docker build --platform $(PLATFORM) -t spellcaster:local -f Dockerfile.local .
 
 build-local-full:
 	@docker context use default 
 	@make build-base build-local start-local
+
+build-remote: Dockerfile.build Dockerfile.remote
+	@make build-base
+	@docker build --platform $(PLATFORM) -t $(REMOTE)/spellcaster:cluster -f Dockerfile.remote .
 
 start-local:
 	@docker compose -f docker-compose.yml up -d
@@ -39,6 +45,7 @@ help:
 	@echo "build-local          Build the local image for running spellcaster app locally."
 	@echo "build-local-full     Build and run local in full; including base images."
 	@echo "rebuild-local        Rebuild spellcaster container and restart"
+	@echo "build-remote			Build remote cluster image"
 	@echo "start-local          Start the local instance and run it."
 	@echo "remove-dangling      Remove dangling images."
 	@echo "prune                Remove dangling volumes and networks."

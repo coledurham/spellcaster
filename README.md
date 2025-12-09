@@ -10,12 +10,7 @@ If you are working on the spellcaster project you can run `make build-local-full
 
 ## Spin Down
 
-To bring down the app and all resources and delete the image that was built use `make down-local-full`. If you want to retain api and db images between runs you can run `make down prune`.
-
-## Run Webpack
-
-To manually run webpack in the container in watch mode use `make run-webpack`. Normally this is not necessary as `make build-local-full` runs the webpack command by default.
-
+To bring down the app and all resources use `make down prune`. Docker images will not be deleted.
 
 ## Local Startup
 

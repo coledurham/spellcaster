@@ -1,0 +1,13 @@
+FROM spellcaster:base
+LABEL author=coledurham\
+    image=spellcaster \
+    tag=remote \
+    project=spellcaster
+ENV NODE_PATH=/usr/local/lib/node_modules
+WORKDIR /app/code
+COPY code/public public/
+COPY code/routes routes/
+COPY code/app.js .
+COPY code/index.html .
+EXPOSE 3000
+CMD ["node", "app.js"]

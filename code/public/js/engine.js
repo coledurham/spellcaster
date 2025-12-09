@@ -356,19 +356,29 @@ function draw(timestamp) {
 window.requestAnimationFrame(draw)
 
 document.querySelector("#animate").addEventListener("click", (e) => {
+    e.preventDefault()
+    animate = !animate
+    document.querySelector('input[type="range"]#rotation').value = 0
+})
+
+document.querySelector("#animate").addEventListener("touched", (e) => {
+    e.preventDefault()
     animate = !animate
     document.querySelector('input[type="range"]#rotation').value = 0
 })
 
 document.querySelector("#direction").addEventListener("click", (e) => {
+    e.preventDefault()
     direction *= -1
 })
 
 document.querySelector("#filled").addEventListener("click", (e) => {
+    e.preventDefault()
     filled = !filled
 })
 
 document.querySelector("#culled").addEventListener("click", (e) => {
+    e.preventDefault()
     culled = !culled
 })
 
@@ -382,11 +392,13 @@ document.querySelector("#angle").addEventListener("change", (e) => {
 })
 
 document.querySelector('input[type="range"]#rotation').addEventListener("change", (e) => {
+    e.preventDefault()
     animate = false
     angle = isNaN(parseFloat(e.target.value)) ? 0 : parseFloat(e.target.value)
 })
 
 document.querySelector('input[type="text"]#tilt').addEventListener("change", (e) => {
+    e.preventDefault()
     const parsedTilt = parseFloat(e.target.value)
 
     if (isNaN(parsedTilt) || parsedTilt < -360 || parsedTilt > 360) {
@@ -426,8 +438,6 @@ document.addEventListener("keydown", (e) => {
 
 const modelSelect = document.querySelector("select#model")
 
-console.log("modelSelect is :: ", modelSelect)
-
 for (let selectOption of Object.keys(models)) {
     let option = document.createElement("option")
     option.value = selectOption
@@ -439,6 +449,7 @@ for (let selectOption of Object.keys(models)) {
 modelSelect.value="cube"
 
 modelSelect.addEventListener("change", (e) => {
+    e.preventDefault()
     model=models[e.target.value]
 })
 
